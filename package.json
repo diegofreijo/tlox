@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "dev": "tsc && node build/cli.js",
     "package": "pkg . --targets node14-linux-x64 --output ./build/hello"
   },
   "bin": {
@@ -23,6 +24,7 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
+    "fp-ts": "^2.13.1",
     "yargs": "^17.6.2"
   }
 }
