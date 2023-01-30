@@ -181,3 +181,6 @@ export const many = <A>(parser: Parser<A>) => {
 
     return new Parser(innerFn)
 }
+
+const whitespaceChar = anyOf([' ', '\t', '\n']);
+export const whitespace = many(whitespaceChar);

@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 import * as E from 'fp-ts/lib/Either'
 import { startsWith } from 'fp-ts/lib/string';
-import { many, parseDigit, parseLowercase, Parser, ParseResult, pchar, pstring, sequenceP, startsWithP } from './parserLib';
+import { many, parseDigit, parseLowercase, Parser, ParseResult, pchar, pstring, sequenceP, startsWithP, whitespace } from './parserLib';
 
 function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: ParseResult<A>) {
     expect(E.isLeft(result)).toBe(true);
@@ -182,6 +182,22 @@ describe('many', () => {
         let parser = many(pchar("a"));
         let res = parser.run("bc");
         expectSuccess([], "bc", res);
+    });
+
+    test('success 3', () => {
+        let parser = many(pchar("a"));
+        let res = parser.run("");
+        expectSuccess([], "", res);
+    });
+
+});
+
+describe('whitespace', () => {
+
+    test('success 1', () => {
+        let parser = whitespace;
+        let res = parser.run("\t  \n    bc");
+        expectSuccess(["\t", " ", " ", "\n", " ", " ", " ", " "], "bc", res);
     });
 
 });
