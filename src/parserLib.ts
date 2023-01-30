@@ -231,6 +231,6 @@ export const keepLeft = <A, B>(p1: Parser<A>) => (p2: Parser<B>) =>
 export const keepRight = <A, B>(p1: Parser<A>) => (p2: Parser<B>) =>
     mapP(([a, b]: [A, B]) => b)(andThen(p1, p2));
 
+export const between = <A, B, C>(p1: Parser<A>) => (p2: Parser<B>) => (p3: Parser<C>) => keepLeft(keepRight(p1)(p2))(p3)
 
-
-export const whitespaceIgnored = keepRight(many(whitespaceChar));
+export const betweenWhitespaces = <A>(p: Parser<A>) => between(whitespace)(p)(whitespace);
