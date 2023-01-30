@@ -1,8 +1,9 @@
 import { describe, expect, test } from '@jest/globals';
 import * as E from 'fp-ts/lib/Either'
-import { Parser, ParseResult } from './parserLib';
+import { startsWith } from 'fp-ts/lib/string';
+import { parseDigit, parseLowercase, Parser, ParseResult, pchar, sequenceP, startsWithP } from './parserLib';
 
-function expectSuccess<T>(expectedValue: T, expectedRemaining: string, result: ParseResult<T>) {
+function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: ParseResult<A>) {
     expect(E.isLeft(result)).toBe(true);
     if (E.isLeft(result)) {
         const { value, remaining } = result.left;
@@ -11,7 +12,7 @@ function expectSuccess<T>(expectedValue: T, expectedRemaining: string, result: P
     }
 }
 
-function expectFailure<T>(expected: T, found: string, result: ParseResult<T> | ParseResult<T[]>) {
+function expectFailure<A>(expected: A, found: A, result: ParseResult<A> | ParseResult<[A, A]>) {
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
         expect(result.right).toEqual(`Expecting '${expected}'. Got '${found}'`);
@@ -21,12 +22,12 @@ function expectFailure<T>(expected: T, found: string, result: ParseResult<T> | P
 describe('pchar', () => {
 
     test('success', () => {
-        let res = Parser.pchar("a").run("abc");
+        let res = pchar("a").run("abc");
         expectSuccess("a", "bc", res);
     });
 
     test('failure', () => {
-        let res = Parser.pchar("a").run("bc");
+        let res = pchar("a").run("bc");
         expectFailure("a", "b", res);
     });
 
@@ -37,13 +38,13 @@ describe('pchar', () => {
 describe('andThen', () => {
 
     test('success', () => {
-        let parser = Parser.pchar("a").andThen(Parser.pchar("b"));
+        let parser = pchar("a").andThen(pchar("b"));
         let res = parser.run("abc");
         expectSuccess(["a", "b"], "c", res);
     });
 
     test('failure', () => {
-        let parser = Parser.pchar("a").andThen(Parser.pchar("b"));
+        let parser = pchar("a").andThen(pchar("b"));
         let res = parser.run("ac");
         expectFailure("b", "c", res);
     });
@@ -54,19 +55,19 @@ describe('andThen', () => {
 describe('orElse', () => {
 
     test('success 1', () => {
-        let parser = Parser.pchar("a").orElse(Parser.pchar("b"));
+        let parser = pchar("a").orElse(pchar("b"));
         let res = parser.run("abc");
         expectSuccess("a", "bc", res);
     });
 
     test('success 2', () => {
-        let parser = Parser.pchar("a").orElse(Parser.pchar("b"));
+        let parser = pchar("a").orElse(pchar("b"));
         let res = parser.run("bc");
         expectSuccess("b", "c", res);
     });
 
     test('failure', () => {
-        let parser = Parser.pchar("a").orElse(Parser.pchar("b"));
+        let parser = pchar("a").orElse(pchar("b"));
         let res = parser.run("c");
         expectFailure("b", "c", res);
     });
@@ -78,19 +79,19 @@ describe('orElse', () => {
 describe('parseLowercase', () => {
 
     test('success 1', () => {
-        let parser = Parser.parseLowercase;
+        let parser = parseLowercase;
         let res = parser.run("abc");
         expectSuccess("a", "bc", res);
     });
 
     test('success 2', () => {
-        let parser = Parser.parseLowercase;
+        let parser = parseLowercase;
         let res = parser.run("c");
         expectSuccess("c", "", res);
     });
 
     test('failure', () => {
-        let parser = Parser.parseLowercase;
+        let parser = parseLowercase;
         let res = parser.run("1abc");
         expectFailure("z", "1", res);
     });
@@ -100,21 +101,44 @@ describe('parseLowercase', () => {
 describe('parseDigit', () => {
 
     test('success 1', () => {
-        let parser = Parser.parseDigit;
+        let parser = parseDigit;
         let res = parser.run("123");
         expectSuccess("1", "23", res);
     });
 
     test('success 2', () => {
-        let parser = Parser.parseDigit;
+        let parser = parseDigit;
         let res = parser.run("0");
         expectSuccess("0", "", res);
     });
 
     test('failure', () => {
-        let parser = Parser.parseDigit;
+        let parser = parseDigit;
         let res = parser.run("abc");
         expectFailure("9", "a", res);
+    });
+
+});
+
+describe('sequence', () => {
+
+    test('success 1', () => {
+        let parser = sequenceP([pchar("a"), pchar("b")]);
+        let res = parser.run("abc");
+        expectSuccess(["a", "b"], "c", res);
+    });
+
+    test('success 2', () => {
+        let parser = sequenceP([pchar("a"), pchar("b"), pchar("c")]);
+        let res = parser.run("abc");
+        expectSuccess(["a", "b", "c"], "", res);
+    });
+
+
+    test('failure', () => {
+        let parser = sequenceP([pchar("a"), pchar("x"), pchar("c")]);
+        let res = parser.run("abc");
+        expectFailure(["x"], ["b"], res);
     });
 
 });
