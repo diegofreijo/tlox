@@ -1,32 +1,50 @@
 import { describe, expect, test } from '@jest/globals';
-import { left } from 'fp-ts/lib/Either';
-import { ParseResult, pchar, run } from './parserLib';
+import * as E from 'fp-ts/lib/Either'
+import { Parser, ParseResult, pchar } from './parserLib';
 
-function expectSuccess<T>(value: T, remaining: string, result: ParseResult<T>) {
-    expect(result._tag).toBe("Left");
-    if (result._tag === "Left") {
-        expect(result.left.value).toBe(value);
-        expect(result.left.remaining).toBe(remaining);
+function expectSuccess<T>(expectedValue: T, expectedRemaining: string, result: ParseResult<T>) {
+    expect(E.isLeft(result)).toBe(true);
+    if (E.isLeft(result)) {
+        const { value, remaining } = result.left;
+        expect(value).toEqual(expectedValue);
+        expect(remaining).toEqual(expectedRemaining);
     }
 }
 
-function expectFailure<T>(expected: string, found: string, result: ParseResult<T>) {
-    expect(result._tag).toBe("Right");
-    if (result._tag === "Right") {
-        expect(result.right).toBe(`Expecting '${expected}'. Got '${found}'`);
+function expectFailure<T>(expected: T, found: string, result: ParseResult<T>) {
+    expect(E.isRight(result)).toBe(true);
+    if (E.isRight(result)) {
+        expect(result.right).toEqual(`Expecting '${expected}'. Got '${found}'`);
     }
 }
 
 describe('pchar', () => {
 
     test('success', () => {
-        let res = run(pchar("a"), "abc");
+        let res = pchar("a").run("abc");
         expectSuccess("a", "bc", res);
     });
 
     test('failure', () => {
-        let res = run(pchar("a"), "bc");
+        let res = pchar("a").run("bc");
         expectFailure("a", "b", res);
     });
+
+});
+
+
+
+describe('andThen', () => {
+
+    test('success', () => {
+        let parser: Parser<string[]> = pchar("a").andThen(pchar("b"));
+        let res: ParseResult<string[]> = parser.run("abc");
+        expectSuccess<string[]>(["a", "b"], "c", res);
+    });
+
+    // test('failure', () => {
+    //     let res = pchar("a").run("bc");
+    //     expectFailure("a", "b", res);
+    // });
 
 });
