@@ -224,3 +224,13 @@ let digits = many1(parseDigit)
 
 // map the digits to an int
 export const pint = mapP(resultToInt)(andThen(opt(pchar('-')), digits));
+
+export const keepLeft = <A, B>(p1: Parser<A>) => (p2: Parser<B>) =>
+    mapP(([a, b]: [A, B]) => a)(andThen(p1, p2));
+
+export const keepRight = <A, B>(p1: Parser<A>) => (p2: Parser<B>) =>
+    mapP(([a, b]: [A, B]) => b)(andThen(p1, p2));
+
+
+
+export const whitespaceIgnored = keepRight(many(whitespaceChar));
