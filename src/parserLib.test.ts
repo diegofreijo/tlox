@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 import * as E from 'fp-ts/lib/Either'
 import { startsWith } from 'fp-ts/lib/string';
-import { many, many1, parseDigit, parseLowercase, Parser, ParseResult, pchar, pstring, sequenceP, startsWithP, whitespace } from './parserLib';
+import { many, many1, parseDigit, parseLowercase, Parser, ParseResult, pchar, pint, pstring, sequenceP, startsWithP, whitespace } from './parserLib';
 
 function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: ParseResult<A>) {
     expect(E.isLeft(result)).toBe(true);
@@ -12,7 +12,7 @@ function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: P
     }
 }
 
-function expectFailure<A>(expected: A, found: A, result: ParseResult<A> | ParseResult<[A, A]>) {
+function expectFailure<A, B>(expected: A, found: B, result: ParseResult<A> | ParseResult<[A, A]>) {
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
         expect(result.right).toEqual(`Expecting '${expected}'. Got '${found}'`);
@@ -216,5 +216,34 @@ describe('many1', () => {
         let parser = many1(pchar("a"));
         let res = parser.run("bc");
         expectFailure(["a"], ["b"], res);
+    });
+});
+
+
+
+describe('pint', () => {
+
+    test('success 1', () => {
+        let parser = pint;
+        let res = parser.run("123abc");
+        expectSuccess(123, "abc", res);
+    });
+
+    test('success 2', () => {
+        let parser = pint;
+        let res = parser.run("-123");
+        expectSuccess(-123, "", res);
+    });
+
+    test('failure 1', () => {
+        let parser = pint;
+        let res = parser.run("abc");
+        expectFailure(9, "a", res);
+    });
+
+    test('failure 2', () => {
+        let parser = pint;
+        let res = parser.run("-abc");
+        expectFailure(9, "a", res);
     });
 });

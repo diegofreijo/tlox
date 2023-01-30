@@ -1,6 +1,5 @@
 import * as E from 'fp-ts/lib/Either'
-import { pipe } from 'fp-ts/lib/function';
-import { map } from 'fp-ts/lib/Functor';
+import * as O from 'fp-ts/lib/Option'
 import { char } from "./model/basics"
 
 export type ParseOutput<A> = { value: A, remaining: string };
@@ -20,25 +19,12 @@ export class Parser<A> {
         return andThen(this, parser2);
     }
 
-    public static orElse<A>(parser1: Parser<A>, parser2: Parser<A>): Parser<A> {
-        let innerFn = (input: string) => {
-            let result1 = parser1.run(input);
-            if (E.isLeft(result1))
-                return result1;
-            else {
-                let result2 = parser2.run(input);
-                return result2;
-            }
-        }
-        return new Parser(innerFn);
-    }
-
     public orElse(parser2: Parser<A>): Parser<A> {
-        return Parser.orElse(this, parser2);
+        return orElse(this)(parser2);
     }
 
     public static choice<A>(listOfParsers: Parser<A>[]): Parser<A> {
-        return listOfParsers.reduce(Parser.orElse);
+        return listOfParsers.reduce(orElseUncurried);
     }
 
 
@@ -92,6 +78,22 @@ export const andThen = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A
     }
     return new Parser(innerFn);
 }
+
+
+export const orElse = <A>(parser1: Parser<A>) => (parser2: Parser<A>): Parser<A> => {
+    let innerFn = (input: string) => {
+        let result1 = parser1.run(input);
+        if (E.isLeft(result1))
+            return result1;
+        else {
+            let result2 = parser2.run(input);
+            return result2;
+        }
+    }
+    return new Parser(innerFn);
+}
+
+export const orElseUncurried = <A>(parser1: Parser<A>, parser2: Parser<A>): Parser<A> => orElse(parser1)(parser2);
 
 export const mapP = <A, B>(mapper: (a: A) => B) => (parser: Parser<A>): Parser<B> => {
     let innerFn = (input: string) => {
@@ -204,15 +206,21 @@ export const many1 = <A>(parser: Parser<A>): Parser<A[]> => {
     return new Parser(innerFn)
 }
 
+export const opt = <A>(parser: Parser<A>) => {
+    let some = mapP(O.some)(parser);
+    let none = returnP(O.none);
+    return some.orElse(none);
+}
 
 // helper
-const resultToInt = (digitList: char[]) =>
+const resultToInt = ([sign, digitList]: [O.Option<char>, char[]]) => {
     // ignore int overflow for now
-    Number.parseInt(digitList.join(''));
-
+    const ret = Number.parseInt(digitList.join(''));
+    return O.isSome(sign) ? -ret : ret;
+}
 
 // define parser for one or more digits
 let digits = many1(parseDigit)
 
 // map the digits to an int
-export const pint = mapP(resultToInt)(digits);
+export const pint = mapP(resultToInt)(andThen(opt(pchar('-')), digits));
