@@ -225,12 +225,23 @@ let digits = many1(parseDigit)
 // map the digits to an int
 export const pint = mapP(resultToInt)(andThen(opt(pchar('-')), digits));
 
-export const keepLeft = <A, B>(p1: Parser<A>) => (p2: Parser<B>) =>
+export const keepLeft = <A>(p1: Parser<A>) => <B>(p2: Parser<B>): Parser<A> =>
     mapP(([a, b]: [A, B]) => a)(andThen(p1, p2));
 
-export const keepRight = <A, B>(p1: Parser<A>) => (p2: Parser<B>) =>
+export const keepRight = <A>(p1: Parser<A>) => <B>(p2: Parser<B>): Parser<B> =>
     mapP(([a, b]: [A, B]) => b)(andThen(p1, p2));
 
 export const between = <A, B, C>(p1: Parser<A>) => (p2: Parser<B>) => (p3: Parser<C>) => keepLeft(keepRight(p1)(p2))(p3)
 
 export const betweenWhitespaces = <A>(p: Parser<A>) => between(whitespace)(p)(whitespace);
+
+export const sepBy1 = <A, B>(p: Parser<A>) => (sep: Parser<B>): Parser<A[]> => {
+    let sepThenP: Parser<A> = keepRight(sep)(p);
+    let p2: Parser<[A, A[]]> = andThen(p, many(sepThenP));
+    return mapP(
+        ([head, tail]: [A, A[]]) => [head, ...tail]
+    )(p2);
+}
+
+export const sepBy = <A, B>(p: Parser<A>) => (sep: Parser<B>): Parser<A[]> =>
+    orElse(sepBy1(p)(sep))(returnP([]));

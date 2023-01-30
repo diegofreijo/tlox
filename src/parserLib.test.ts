@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 import * as E from 'fp-ts/lib/Either'
 import { startsWith } from 'fp-ts/lib/string';
-import { betweenWhitespaces, many, many1, parseDigit, parseLowercase, Parser, ParseResult, pchar, pint, pstring, sequenceP, whitespace } from './parserLib';
+import { betweenWhitespaces, many, many1, parseDigit, parseLowercase, Parser, ParseResult, pchar, pint, pstring, sepBy, sepBy1, sequenceP, whitespace } from './parserLib';
 
 function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: ParseResult<A>) {
     expect(E.isLeft(result)).toBe(true);
@@ -261,6 +261,25 @@ describe('betweenWhitespaces', () => {
         let parser = betweenWhitespaces(pchar("a"));
         let res = parser.run("abc");
         expectSuccess("a", "bc", res);
+    });
+
+});
+
+
+
+describe('sepBy1', () => {
+
+    test('success', () => {
+        let parser = sepBy1(parseDigit)(pchar(","));
+        expectSuccess(["1"], ",", parser.run("1,"));
+        expectSuccess(["1", "2"], "", parser.run("1,2"));
+        expectSuccess(["1", "2"], "", parser.run("1,2"));
+        expectSuccess(["1", "2"], ",a", parser.run("1,2,a"));
+    });
+
+    test('failure', () => {
+        let parser = sepBy1(parseDigit)(pchar(","));
+        expectFailure(["9"], ",", parser.run(",1,"));
     });
 
 });
