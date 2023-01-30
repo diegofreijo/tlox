@@ -46,22 +46,9 @@ export class Parser<A> {
         return this.action(input);
     }
 
-    public static mapP<A, B>(mapper: (a: A) => B, parser: Parser<A>): Parser<B> {
-        let innerFn = (input: string) => {
-            let result = parser.run(input);
-            if (E.isLeft(result)) {
-                const { value, remaining } = result.left;
-                const newValue = mapper(value);
-                return E.left({ value: newValue, remaining });
-            } else {
-                return result;
-            }
-        }
-        return new Parser(innerFn);
-    }
 
     public mapP<B>(mapper: (a: A) => B): Parser<B> {
-        return Parser.mapP(mapper, this);
+        return mapP(mapper)(this);
     }
 }
 
@@ -106,6 +93,20 @@ export const andThen = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A
     return new Parser(innerFn);
 }
 
+export const mapP = <A, B>(mapper: (a: A) => B) => (parser: Parser<A>): Parser<B> => {
+    let innerFn = (input: string) => {
+        let result = parser.run(input);
+        if (E.isLeft(result)) {
+            const { value, remaining } = result.left;
+            const newValue = mapper(value);
+            return E.left({ value: newValue, remaining });
+        } else {
+            return result;
+        }
+    }
+    return new Parser(innerFn);
+}
+
 
 export const anyOf = <A>(listOfChars: char[]): Parser<char> =>
     Parser.choice(listOfChars.map(pchar));
@@ -121,9 +122,8 @@ const returnP = <A>(value: A): Parser<A> => {
 }
 
 const applyP = <A, B>(fP: Parser<(a: A) => B>) => (aP: Parser<A>): Parser<B> =>
-    Parser.mapP(
+    andThen(fP, aP).mapP(
         ([f, a]) => f(a),
-        andThen(fP, aP)
     );
 
 
@@ -147,4 +147,25 @@ export const sequenceP = <A>(parserList: Parser<A>[]): Parser<A[]> => {
         const [head, ...tail] = parserList;
         return consP(head)(sequenceP(tail));
     }
+}
+
+
+/// Helper to create a string from a list of chars
+const charsToStr = (charList: char[]) => charList.join('');
+
+// match a specific string
+export let pstring = (str: string) => {
+    const charParsers = str.split('').map(pchar);
+    return mapP(charsToStr)(sequenceP(charParsers));
+
+    // pipe(
+    //     str,
+
+    //     // map each char to a pchar
+    //     |> List.map pchar
+    // // convert to Parser<char list>
+    // |> sequence
+    //     // convert Parser<char list> to Parser<string>
+    //     |> mapP charsToStr
+    // );
 }
