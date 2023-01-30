@@ -11,7 +11,7 @@ function expectSuccess<T>(expectedValue: T, expectedRemaining: string, result: P
     }
 }
 
-function expectFailure<T>(expected: T, found: string, result: ParseResult<T>) {
+function expectFailure<T>(expected: T, found: string, result: ParseResult<T> | ParseResult<T[]>) {
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
         expect(result.right).toEqual(`Expecting '${expected}'. Got '${found}'`);
@@ -37,14 +37,15 @@ describe('pchar', () => {
 describe('andThen', () => {
 
     test('success', () => {
-        let parser: Parser<string[]> = pchar("a").andThen(pchar("b"));
-        let res: ParseResult<string[]> = parser.run("abc");
-        expectSuccess<string[]>(["a", "b"], "c", res);
+        let parser = pchar("a").andThen(pchar("b"));
+        let res = parser.run("abc");
+        expectSuccess(["a", "b"], "c", res);
     });
 
-    // test('failure', () => {
-    //     let res = pchar("a").run("bc");
-    //     expectFailure("a", "b", res);
-    // });
+    test('failure', () => {
+        let parser = pchar("a").andThen(pchar("b"));
+        let res = parser.run("ac");
+        expectFailure("b", "c", res);
+    });
 
 });
