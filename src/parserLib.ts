@@ -15,14 +15,11 @@ export class Parser<T> {
 
     public andThen(parser2: Parser<T>): Parser<T[]> {
         let innerFn = (input: string) => {
-            // run parser1 with the input
             let result1 = this.run(input);
             if (E.isRight(result1))
                 return result1;
             else {
                 const { value: value1, remaining: remaining1 } = result1.left;
-
-                // run parser2 with the remaining input
                 let result2 = parser2.run(remaining1);
                 if (E.isRight(result2))
                     return result2;
@@ -35,6 +32,20 @@ export class Parser<T> {
         }
         return new Parser(innerFn);
     }
+
+    public orElse(parser2: Parser<T>): Parser<T> {
+        let innerFn = (input: string) => {
+            let result1 = this.run(input);
+            if (E.isLeft(result1))
+                return result1;
+            else {
+                let result2 = parser2.run(input);
+                return result2;
+            }
+        }
+        return new Parser(innerFn);
+    }
+
 
     public run(input: string): ParseResult<T> {
         return this.action(input);

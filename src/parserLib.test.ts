@@ -49,3 +49,26 @@ describe('andThen', () => {
     });
 
 });
+
+
+describe('orElse', () => {
+
+    test('success 1', () => {
+        let parser = pchar("a").orElse(pchar("b"));
+        let res = parser.run("abc");
+        expectSuccess("a", "bc", res);
+    });
+
+    test('success 2', () => {
+        let parser = pchar("a").orElse(pchar("b"));
+        let res = parser.run("bc");
+        expectSuccess("b", "c", res);
+    });
+
+    test('failure', () => {
+        let parser = pchar("a").orElse(pchar("b"));
+        let res = parser.run("c");
+        expectFailure("b", "c", res);
+    });
+
+});
