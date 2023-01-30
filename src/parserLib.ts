@@ -184,3 +184,21 @@ export const many = <A>(parser: Parser<A>) => {
 
 const whitespaceChar = anyOf([' ', '\t', '\n']);
 export const whitespace = many(whitespaceChar);
+
+export const many1 = <A>(parser: Parser<A>): Parser<A[]> => {
+    let innerFn = (input: string) => {
+        return E.match(
+            (output: ParseOutput<A>) => {
+                const { value: firstValue, remaining: inputAfterFirstParse } = output;
+                let { value: subsequentValues, remaining: remainingInput } =
+                    parseZeroOrMore(parser)(inputAfterFirstParse);
+                let values = [firstValue, ...subsequentValues];
+                return E.left({ value: values, remaining: remainingInput });
+            },
+            (err: string) => E.right(err)
+
+        )(parser.run(input));
+    }
+
+    return new Parser(innerFn)
+}
