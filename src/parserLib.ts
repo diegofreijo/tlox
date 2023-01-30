@@ -3,28 +3,32 @@ import * as O from 'fp-ts/lib/Option'
 import { char } from "./model/basics"
 
 export type ParseOutput<A> = { value: A, remaining: string };
-export type ParseError = string;
+export type ParseLabel = string;
+export type ParseError = { label: ParseLabel, message: string };
 export type ParseResult<A> = E.Either<ParseOutput<A>, ParseError>;
+
+export const printResult = <A>(result: ParseResult<A>): string =>
+    E.match(
+        (output: ParseOutput<A>) => `${output.value}`,
+        (err: ParseError) => `Error parsing '${err.label}'. ${err.message}`
+    )(result);
 
 type ParsingAction<A> = (input: string) => ParseResult<A>;
 export class Parser<A> {
     action: ParsingAction<A>;
+    label: ParseLabel;
 
-    constructor(action: ParsingAction<A>) {
+    constructor(action: ParsingAction<A>, label: ParseLabel) {
         this.action = action;
+        this.label = label;
     }
 
-
-    public andThen<B>(parser2: Parser<B>): Parser<[A, B]> {
-        return andThen(this, parser2);
+    public andThen<B>(parser2: Parser<B>, label: ParseLabel): Parser<[A, B]> {
+        return andThen(this, parser2, label);
     }
 
-    public orElse(parser2: Parser<A>): Parser<A> {
-        return orElse(this)(parser2);
-    }
-
-    public static choice<A>(listOfParsers: Parser<A>[]): Parser<A> {
-        return listOfParsers.reduce(orElseUncurried);
+    public orElse(parser2: Parser<A>, label: ParseLabel): Parser<A> {
+        return orElse(this)(parser2)(label);
     }
 
 
@@ -32,30 +36,30 @@ export class Parser<A> {
         return this.action(input);
     }
 
-    public mapP<B>(mapper: (a: A) => B): Parser<B> {
-        return mapP(mapper)(this);
-    }
+    // public mapP<B>(mapper: (a: A) => B): Parser<B> {
+    //     return mapP(mapper)(this);
+    // }
 }
 
 
 export const run = <A>(parser: Parser<A>) => (input: string): ParseResult<A> => parser.action(input);
 
 export const pchar = (charToMatch: char) => {
-    let innerFn = (str: string) => {
-        if (!str)
-            return E.right("No more input");
+    let innerFn = (input: string) => {
+        if (!input)
+            return E.right({ label: "char", message: "No more input" });
         else {
-            let first = str[0];
+            let first = input[0];
             if (first === charToMatch) {
-                let ret = { value: charToMatch, remaining: str.substring(1) };
+                let ret = { value: charToMatch, remaining: input.substring(1) };
                 return E.left(ret);
             } else {
-                return E.right(`Expecting '${charToMatch}'. Got '${first}'`);
+                return E.right({ label: "char", message: `Expecting '${charToMatch}'. Got '${first}'` });
             }
         }
     }
 
-    return new Parser(innerFn);
+    return new Parser(innerFn, "char");
 }
 
 
@@ -63,7 +67,7 @@ export const andThen = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A
     let innerFn = (input: string) => {
         let result1 = parser1.run(input);
         if (E.isRight(result1))
-            return result1;
+            return E.right({ label, message: result1.right.message });
         else {
             const { value: value1, remaining: remaining1 } = result1.left;
             let result2 = parser2.run(remaining1);
@@ -76,11 +80,11 @@ export const andThen = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A
             }
         }
     }
-    return new Parser(innerFn);
+    return new Parser(innerFn, label);
 }
 
 
-export const orElse = <A>(parser1: Parser<A>) => (parser2: Parser<A>): Parser<A> => {
+export const orElse = <A>(parser1: Parser<A>) => (parser2: Parser<A>) => (label: ParseLabel): Parser<A> => {
     let innerFn = (input: string) => {
         let result1 = parser1.run(input);
         if (E.isLeft(result1))
@@ -90,12 +94,12 @@ export const orElse = <A>(parser1: Parser<A>) => (parser2: Parser<A>): Parser<A>
             return result2;
         }
     }
-    return new Parser(innerFn);
+    return new Parser(innerFn, label);
 }
 
-export const orElseUncurried = <A>(parser1: Parser<A>, parser2: Parser<A>): Parser<A> => orElse(parser1)(parser2);
+export const orElseUncurried = <A>(label: ParseLabel) => (parser1: Parser<A>, parser2: Parser<A>): Parser<A> => orElse(parser1)(parser2)(label);
 
-export const mapP = <A, B>(mapper: (a: A) => B) => (parser: Parser<A>): Parser<B> => {
+export const mapP = <A, B>(mapper: (a: A) => B) => (parser: Parser<A>) => (label: ParseLabel): Parser<B> => {
     let innerFn = (input: string) => {
         let result = parser.run(input);
         if (E.isLeft(result)) {
@@ -106,24 +110,27 @@ export const mapP = <A, B>(mapper: (a: A) => B) => (parser: Parser<A>): Parser<B
             return result;
         }
     }
-    return new Parser(innerFn);
+    return new Parser(innerFn, label);
 }
 
 
-export const anyOf = <A>(listOfChars: char[]): Parser<char> =>
-    Parser.choice(listOfChars.map(pchar));
+export const choice = <A>(listOfParsers: Parser<A>[], label: ParseLabel): Parser<A> => {
+    return listOfParsers.reduce(orElseUncurried(label));
+}
 
-
+export const anyOf = <A>(listOfChars: char[], label: ParseLabel): Parser<char> =>
+    choice(listOfChars.map(pchar), label);
 
 
 const returnP = <A>(value: A): Parser<A> => {
     let innerFn = (input: string) => E.left({ value, remaining: input });
-    return new Parser(innerFn);
+    return new Parser(innerFn, "returnP");
 }
 
 const applyP = <A, B>(fP: Parser<(a: A) => B>) => (aP: Parser<A>): Parser<B> =>
-    andThen(fP, aP).mapP(
+    mapP(
         ([f, a]) => f(a),
+        andThen(fP, aP)
     );
 
 
@@ -150,8 +157,8 @@ export const sequenceP = <A>(parserList: Parser<A>[]): Parser<A[]> => {
 }
 
 
-export const parseLowercase = anyOf('abcdefghijklmnopqrstuvwxyz'.split(''));
-export const parseDigit = anyOf('0123456789'.split(''));
+export const parseLowercase = anyOf('abcdefghijklmnopqrstuvwxyz'.split(''), "lowercase");
+export const parseDigit = anyOf('0123456789'.split(''), "digit");
 
 /// Helper to create a string from a list of chars
 const charsToStr = (charList: char[]) => charList.join('');
@@ -172,7 +179,7 @@ const parseZeroOrMore = <A>(parser: Parser<A>) => (input: string): ParseOutput<A
             let values = [firstValue, ...subsequentValues];
             return { value: values, remaining: remainingInput };
         },
-        (err: string) => { const ret: ParseOutput<A[]> = { value: [], remaining: input }; return ret; }
+        (err: ParseError) => { return { value: [], remaining: input }; }
     )(result);
     return ret;
 }
@@ -182,10 +189,10 @@ export const many = <A>(parser: Parser<A>) => {
     let innerFn = (input: string) =>
         E.left(parseZeroOrMore(parser)(input))
 
-    return new Parser(innerFn)
+    return new Parser(innerFn, "many")
 }
 
-const whitespaceChar = anyOf([' ', '\t', '\n']);
+const whitespaceChar = anyOf([' ', '\t', '\n'], "whitespace");
 export const whitespace = many(whitespaceChar);
 
 export const many1 = <A>(parser: Parser<A>): Parser<A[]> => {
@@ -198,18 +205,18 @@ export const many1 = <A>(parser: Parser<A>): Parser<A[]> => {
                 let values = [firstValue, ...subsequentValues];
                 return E.left({ value: values, remaining: remainingInput });
             },
-            (err: string) => E.right(err)
+            (err: ParseError) => E.right(err)
 
         )(parser.run(input));
     }
 
-    return new Parser(innerFn)
+    return new Parser(innerFn, "many1")
 }
 
-export const opt = <A>(parser: Parser<A>) => {
+export const opt = <A>(parser: Parser<A>, label: ParseLabel) => {
     let some = mapP(O.some)(parser);
     let none = returnP(O.none);
-    return some.orElse(none);
+    return some.orElse(none, label);
 }
 
 // helper
@@ -223,9 +230,9 @@ const resultToInt = ([sign, digitList]: [O.Option<char>, char[]]) => {
 let digits = many1(parseDigit)
 
 // map the digits to an int
-export const pint = mapP(resultToInt)(andThen(opt(pchar('-')), digits));
+export const pint = mapP(resultToInt)(andThen(opt(pchar('-'), "int"), digits));
 
-export const keepLeft = <A>(p1: Parser<A>) => <B>(p2: Parser<B>): Parser<A> =>
+export const keepLeft = <A>(p1: Parser<A>) => <B>(p2: Parser<B>) =>
     mapP(([a, b]: [A, B]) => a)(andThen(p1, p2));
 
 export const keepRight = <A>(p1: Parser<A>) => <B>(p2: Parser<B>): Parser<B> =>
@@ -243,5 +250,5 @@ export const sepBy1 = <A, B>(p: Parser<A>) => (sep: Parser<B>): Parser<A[]> => {
     )(p2);
 }
 
-export const sepBy = <A, B>(p: Parser<A>) => (sep: Parser<B>): Parser<A[]> =>
+export const sepBy = <A, B>(p: Parser<A>) => (sep: Parser<B>) =>
     orElse(sepBy1(p)(sep))(returnP([]));
