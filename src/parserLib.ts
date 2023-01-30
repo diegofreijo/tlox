@@ -46,13 +46,13 @@ export class Parser<A> {
         return this.action(input);
     }
 
-
     public mapP<B>(mapper: (a: A) => B): Parser<B> {
         return mapP(mapper)(this);
     }
 }
 
 
+export const run = <A>(parser: Parser<A>) => (input: string): ParseResult<A> => parser.action(input);
 
 export const pchar = (charToMatch: char) => {
     let innerFn = (str: string) => {
@@ -157,15 +157,27 @@ const charsToStr = (charList: char[]) => charList.join('');
 export let pstring = (str: string) => {
     const charParsers = str.split('').map(pchar);
     return mapP(charsToStr)(sequenceP(charParsers));
+}
 
-    // pipe(
-    //     str,
 
-    //     // map each char to a pchar
-    //     |> List.map pchar
-    // // convert to Parser<char list>
-    // |> sequence
-    //     // convert Parser<char list> to Parser<string>
-    //     |> mapP charsToStr
-    // );
+const parseZeroOrMore = <A>(parser: Parser<A>) => (input: string): ParseOutput<A[]> => {
+    const result = parser.run(input);
+    const ret: ParseOutput<A[]> = E.match(
+        (left: ParseOutput<A>) => {
+            const { value: firstValue, remaining: inputAfterFirstParse } = left;
+            let { value: subsequentValues, remaining: remainingInput } = parseZeroOrMore(parser)(inputAfterFirstParse);
+            let values = [firstValue, ...subsequentValues];
+            return { value: values, remaining: remainingInput };
+        },
+        (err: string) => { const ret: ParseOutput<A[]> = { value: [], remaining: input }; return ret; }
+    )(result);
+    return ret;
+}
+
+/// match zero or more occurrences of the specified parser
+export const many = <A>(parser: Parser<A>) => {
+    let innerFn = (input: string) =>
+        E.left(parseZeroOrMore(parser)(input))
+
+    return new Parser(innerFn)
 }
