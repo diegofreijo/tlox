@@ -112,8 +112,6 @@ export const anyOf = <A>(listOfChars: char[]): Parser<char> =>
     Parser.choice(listOfChars.map(pchar));
 
 
-export const parseLowercase = anyOf('abcdefghijklmnopqrstuvwxyz'.split(''));
-export const parseDigit = anyOf('0123456789'.split(''));
 
 
 const returnP = <A>(value: A): Parser<A> => {
@@ -149,6 +147,9 @@ export const sequenceP = <A>(parserList: Parser<A>[]): Parser<A[]> => {
     }
 }
 
+
+export const parseLowercase = anyOf('abcdefghijklmnopqrstuvwxyz'.split(''));
+export const parseDigit = anyOf('0123456789'.split(''));
 
 /// Helper to create a string from a list of chars
 const charsToStr = (charList: char[]) => charList.join('');
@@ -202,3 +203,16 @@ export const many1 = <A>(parser: Parser<A>): Parser<A[]> => {
 
     return new Parser(innerFn)
 }
+
+
+// helper
+const resultToInt = (digitList: char[]) =>
+    // ignore int overflow for now
+    Number.parseInt(digitList.join(''));
+
+
+// define parser for one or more digits
+let digits = many1(parseDigit)
+
+// map the digits to an int
+export const pint = mapP(resultToInt)(digits);
