@@ -54,25 +54,32 @@ export const setLabel = <A>(parser: Parser<A>) => (newLabel: ParseLabel): Parser
     return new Parser(innerFn, newLabel);
 }
 
+
 export const run = <A>(parser: Parser<A>) => (input: string): ParseResult<A> => parser.action(input);
 
-export const pchar = (charToMatch: char) => {
-    const label = `char`;
+
+export const satisfy = (predicate: (c: char) => boolean) => (label: ParseLabel) => {
     let innerFn = (input: string) => {
         if (!input)
             return E.right({ label, message: "No more input" });
         else {
             let first = input[0];
-            if (first === charToMatch) {
-                let ret = { value: charToMatch, remaining: input.substring(1) };
+            if (predicate(first)) {
+                let ret = { value: first, remaining: input.substring(1) };
                 return E.left(ret);
             } else {
-                return E.right({ label, message: `Expecting '${charToMatch}'. Got '${first}'` });
+                return E.right({ label, message: `Unexpected '${first}'` });
             }
         }
     }
 
     return new Parser(innerFn, label);
+}
+
+export const pchar = (charToMatch: char) => {
+    const predicate = (c: char) => c === charToMatch;
+    const label = charToMatch;
+    return satisfy(predicate)(label);
 }
 
 

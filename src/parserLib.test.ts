@@ -1,7 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 import * as E from 'fp-ts/lib/Either'
-import { startsWith } from 'fp-ts/lib/string';
-import { betweenWhitespaces, many, many1, parseDigit, ParseLabel, parseLowercase, Parser, ParseResult, pchar, pint, printResult, pstring, sepBy, sepBy1, sequenceP, whitespace } from './parserLib';
+import { betweenWhitespaces, many, many1, parseDigit, parseLowercase, ParseResult, pchar, pint, printResult, pstring, sepBy1, sequenceP, whitespace } from './parserLib';
 
 function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: ParseResult<A>) {
     expect(E.isLeft(result)).toBe(true);
@@ -16,7 +15,7 @@ function expectFailure<A, B>(expected: A, found: B, result: ParseResult<A> | Par
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
         // expect(printResult(result)).toEqual(`Error parsing '${label}'. Expecting '${expected}'. Got '${found}'`);
-        expect(printResult(result)).toContain(`Expecting '${expected}'. Got '${found}'`);
+        expect(printResult(result)).toContain(`Unexpected '${found}'`);
     }
 }
 
