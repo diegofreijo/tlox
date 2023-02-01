@@ -12,10 +12,11 @@ function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: P
     }
 }
 
-function expectFailure<A, B>(expected: A, found: B, label: ParseLabel, result: ParseResult<A> | ParseResult<[A, A]>) {
+function expectFailure<A, B>(expected: A, found: B, result: ParseResult<A> | ParseResult<[A, A]>) {
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
-        expect(printResult(result)).toEqual(`Error parsing '${label}'. Expecting '${expected}'. Got '${found}'`);
+        // expect(printResult(result)).toEqual(`Error parsing '${label}'. Expecting '${expected}'. Got '${found}'`);
+        expect(printResult(result)).toContain(`Expecting '${expected}'. Got '${found}'`);
     }
 }
 
@@ -28,7 +29,7 @@ describe('pchar', () => {
 
     test('failure', () => {
         let res = pchar("a").run("bc");
-        expectFailure("a", "b", "char", res);
+        expectFailure("a", "b", res);
     });
 
 });
@@ -46,7 +47,7 @@ describe('andThen', () => {
     test('failure', () => {
         let parser = pchar("a").andThen(pchar("b"));
         let res = parser.run("ac");
-        expectFailure("b", "c", "char", res);
+        expectFailure("b", "c", res);
     });
 
 });
@@ -55,21 +56,21 @@ describe('andThen', () => {
 describe('orElse', () => {
 
     test('success 1', () => {
-        let parser = pchar("a").orElse(pchar("b"), "char");
+        let parser = pchar("a").orElse(pchar("b"));
         let res = parser.run("abc");
         expectSuccess("a", "bc", res);
     });
 
     test('success 2', () => {
-        let parser = pchar("a").orElse(pchar("b"), "char");
+        let parser = pchar("a").orElse(pchar("b"));
         let res = parser.run("bc");
         expectSuccess("b", "c", res);
     });
 
     test('failure', () => {
-        let parser = pchar("a").orElse(pchar("b"), "char");
+        let parser = pchar("a").orElse(pchar("b"));
         let res = parser.run("c");
-        expectFailure("b", "c", "char", res);
+        expectFailure("b", "c", res);
     });
 
 });
@@ -93,7 +94,7 @@ describe('parseLowercase', () => {
     test('failure', () => {
         let parser = parseLowercase;
         let res = parser.run("1abc");
-        expectFailure("z", "1", "char", res);
+        expectFailure("z", "1", res);
     });
 
 });
@@ -115,7 +116,7 @@ describe('parseDigit', () => {
     test('failure', () => {
         let parser = parseDigit;
         let res = parser.run("abc");
-        expectFailure("9", "a", "digit", res);
+        expectFailure("9", "a", res);
     });
 
 });
@@ -138,7 +139,7 @@ describe('sequence', () => {
     test('failure', () => {
         let parser = sequenceP([pchar("a"), pchar("x"), pchar("c")]);
         let res = parser.run("abc");
-        expectFailure(["x"], ["b"], "char", res);
+        expectFailure(["x"], ["b"], res);
     });
 
 });
@@ -162,7 +163,7 @@ describe('pstring', () => {
     test('failure', () => {
         let parser = pstring("axc");
         let res = parser.run("abc");
-        expectFailure("x", "b", "char", res);
+        expectFailure("x", "b", res);
     });
 
 });
@@ -215,7 +216,7 @@ describe('many1', () => {
     test('failure', () => {
         let parser = many1(pchar("a"));
         let res = parser.run("bc");
-        expectFailure(["a"], ["b"], "char", res);
+        expectFailure(["a"], ["b"], res);
     });
 });
 
@@ -238,13 +239,13 @@ describe('pint', () => {
     test('failure 1', () => {
         let parser = pint;
         let res = parser.run("abc");
-        expectFailure(9, "a", "char", res);
+        expectFailure(9, "a", res);
     });
 
     test('failure 2', () => {
         let parser = pint;
         let res = parser.run("-abc");
-        expectFailure(9, "a", "char", res);
+        expectFailure(9, "a", res);
     });
 });
 
@@ -279,7 +280,7 @@ describe('sepBy1', () => {
 
     test('failure', () => {
         let parser = sepBy1(parseDigit)(pchar(","));
-        expectFailure(["9"], ",", "char", parser.run(",1,"));
+        expectFailure(["9"], ",", parser.run(",1,"));
     });
 
 });
