@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 import * as E from 'fp-ts/lib/Either'
-import { betweenWhitespaces, many, many1, parseDigit, parseLowercase, ParseResult, pchar, pint, printResult, pstring, sepBy1, sequenceP, whitespace } from './parserLib';
+import { betweenWhitespaces, many, many1, parseDigit, parseLowercase, ParseResult, pchar, pint, printResult, pstring, pword, sepBy1, sequenceP, tokenize, whitespace } from './parserLib';
 
 function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: ParseResult<A>) {
     expect(E.isLeft(result)).toBe(true);
@@ -283,3 +283,41 @@ describe('sepBy1', () => {
     });
 
 });
+
+
+describe('pword', () => {
+
+    test('success', () => {
+        let parser = pword;
+        expectSuccess("asd", "", parser.run("asd"));
+        expectSuccess("asd", " qwe", parser.run("asd qwe"));
+    });
+
+    test('failure', () => {
+        let parser = pword;
+        expectFailure("a", "1", parser.run("1"));
+    });
+
+});
+
+
+
+// describe('tokenize', () => {
+
+//     test('success', () => {
+
+//         type Token =
+//             | { type: "int", value: number }
+//             | { type: "string", value: string }
+
+//         let digitP = tokenize((value) => ({ type: "int", value }))(pint);
+//         let stringP = tokenize((value) => ({ type: "string", value }))(pword);
+//         expectSuccess(["1"], ",", parser.run("1,"));
+//     });
+
+//     // test('failure', () => {
+//     //     let parser = sepBy1(parseDigit)(pchar(","));
+//     //     expectFailure(["9"], ",", parser.run(",1,"));
+//     // });
+
+// });

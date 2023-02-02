@@ -1,5 +1,6 @@
 import * as E from 'fp-ts/lib/Either'
 import * as O from 'fp-ts/lib/Option'
+import { tok } from 'typescript-parsec';
 import { char } from "./model/basics"
 
 export type ParseOutput<A> = { value: A, remaining: string };
@@ -243,6 +244,8 @@ export const opt = <A>(parser: Parser<A>) => {
     return some.orElse(none);
 }
 
+export const pword = mapP((arr: string[]) => arr.join(''))(many1(parseLowercase));
+
 // helper
 const resultToInt = ([sign, digitList]: [O.Option<char>, char[]]) => {
     // ignore int overflow for now
@@ -280,3 +283,7 @@ export const sepBy1 = <A, B>(p: Parser<A>) => (sep: Parser<B>): Parser<A[]> => {
 
 export const sepBy = <A, B>(p: Parser<A>) => (sep: Parser<B>) =>
     orElse(sepBy1(p)(sep))(returnP([]));
+
+
+export const tokenize = <A, T>(tokenizer: (t: A) => T) => (parser: Parser<A>) =>
+    mapP(tokenizer)(parser);
