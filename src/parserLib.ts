@@ -269,9 +269,9 @@ export const keepLeft = <A>(p1: Parser<A>) => <B>(p2: Parser<B>) =>
 export const keepRight = <A>(p1: Parser<A>) => <B>(p2: Parser<B>): Parser<B> =>
     mapP(([a, b]: [A, B]) => b)(andThen(p1, p2));
 
-export const between = <A, B, C>(p1: Parser<A>) => (p2: Parser<B>) => (p3: Parser<C>) => keepLeft(keepRight(p1)(p2))(p3)
+export const between = <A>(p1: Parser<A>) => <B>(p2: Parser<B>) => <C>(p3: Parser<C>): Parser<B> => keepLeft(keepRight(p1)(p2))(p3)
 
-export const betweenWhitespaces = <A>(p: Parser<A>) => between(whitespace)(p)(whitespace);
+export const betweenWhitespaces = <A>(p: Parser<A>): Parser<A> => between(whitespace)(p)(whitespace);
 
 export const sepBy1 = <A, B>(p: Parser<A>) => (sep: Parser<B>): Parser<A[]> => {
     let sepThenP: Parser<A> = keepRight(sep)(p);

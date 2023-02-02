@@ -1,37 +1,58 @@
-// import { newObjFunction, ObjFunction } from "./model/object";
-// import { Scanner } from "./scanner";
+import * as S from "fp-ts/lib/State";
+import { Operation } from "./model/chunk";
+import { Value } from "./model/value";
+import { Token, TokenType } from "./scanner";
 
-// export class Compiler {
-//     had_error = false;
-//     panic_mode = false;
+export type State = {
+    tokens: Token[],
+    constants: Value[]
+}
+export type Output = Operation[];
+type Compiler = S.State<State, Output>;
 
-//     scanner: Scanner;
-//     // previous: TokenResult:: invalid(),
-//     // current: TokenResult:: invalid(),
+const EMPTY_STATE: State = { tokens: [], constants: [] };
 
-//     // locals: [];
-//     // scope_depth: 0;
+const emit = (type: TokenType, op: Operation): Compiler => (state: State): [Output, State] => {
+    if (state.tokens.length == 0) {
+        return [[], EMPTY_STATE];
+    } else {
+        const [head, ...tail] = state.tokens;
+        if (head.type === type)
+            return [
+                [op],
+                { tokens: tail, constants: state.constants },
+            ];
+        else {
+            throw new Error(`Unexpected token '${head.type}'`);
+        }
+    }
+}
 
-//     constructor(source: string) {
-//         this.scanner = new Scanner(source);
-//     }
 
-//     public compile(): ObjFunction {
-//         let frame: ObjFunction = newObjFunction("main");
-//         // self.advance();
+export const plus = emit(TokenType.Plus, { type: "Add" });
 
-//         // while !self.matches(TokenType:: Eof) {
-//         //     self.declaration(& mut frame);
-//         // }
+export const number: Compiler = (state: State): [Output, State] => {
+    if (state.tokens.length == 0) {
+        return [[], EMPTY_STATE];
+    } else {
+        const [head, ...tail] = state.tokens;
+        if (head.type === TokenType.Number)
+            return [
+                [{ type: "Constant", id: state.constants.length }],
+                { tokens: tail, constants: state.constants.concat({ type: "Number", val: head.value }) }
+            ];
+        else {
+            throw new Error(`Unexpected token '${head.type}'`);
+        }
+    }
+}
 
-//         // self.emit_return(& mut frame);
+export const expression = (state: State): [readonly Output[], State] => {
+    const actions = [number, plus, number];
+    return S.sequenceArray(actions)(state);
+}
 
-//         // #[cfg(feature = "debug_print_code")]
-//         // if !ret.had_error {
-//         //     ret.chunk.disassemble("code");
-//         // }
-
-//         return frame
-//     }
-
-// }
+export const compile = (tokens: Token[]): [readonly Output[], State] => {
+    const state: State = { tokens: tokens, constants: [] };
+    return expression(state);
+}

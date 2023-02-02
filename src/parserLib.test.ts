@@ -305,7 +305,6 @@ describe('pword', () => {
 describe('tokenize', () => {
 
     test('success', () => {
-
         type Token =
             | { type: "int", value: number }
             | { type: "str", value: string }

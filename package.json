@@ -32,7 +32,6 @@
   },
   "dependencies": {
     "fp-ts": "^2.13.1",
-    "typescript-parsec": "^0.3.2",
     "yargs": "^17.6.2"
   }
 }

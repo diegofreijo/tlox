@@ -30,7 +30,8 @@ export type Operation =
     { type: "Loop", offset: StackOffset } |
     { type: "Jump", offset: StackOffset } |
     { type: "Call", arguments: number } |
-    { type: "Return" }
+    { type: "Return" } |
+    { type: "Noop" }
 
 export type Chunk = {
     code: Operation[],
