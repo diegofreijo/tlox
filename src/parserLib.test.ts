@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 import * as E from 'fp-ts/lib/Either'
-import { betweenWhitespaces, many, many1, parseDigit, parseLowercase, ParseResult, pchar, pint, printResult, pstring, pword, sepBy1, sequenceP, tokenize, whitespace } from './parserLib';
+import { anyOf, betweenWhitespaces, choice, many, many1, orElse, parseDigit, parseLowercase, Parser, ParseResult, pchar, pint, printResult, pstring, pword, sepBy1, sequenceP, tokenize, whitespace } from './parserLib';
 
 function expectSuccess<A>(expectedValue: A, expectedRemaining: string, result: ParseResult<A>) {
     expect(E.isLeft(result)).toBe(true);
@@ -302,22 +302,25 @@ describe('pword', () => {
 
 
 
-// describe('tokenize', () => {
+describe('tokenize', () => {
 
-//     test('success', () => {
+    test('success', () => {
 
-//         type Token =
-//             | { type: "int", value: number }
-//             | { type: "string", value: string }
+        type Token =
+            | { type: "int", value: number }
+            | { type: "str", value: string }
 
-//         let digitP = tokenize((value) => ({ type: "int", value }))(pint);
-//         let stringP = tokenize((value) => ({ type: "string", value }))(pword);
-//         expectSuccess(["1"], ",", parser.run("1,"));
-//     });
+        const intToken = (value: number): Token => ({ type: "int", value });
+        const strToken = (value: string): Token => ({ type: "str", value });
 
-//     // test('failure', () => {
-//     //     let parser = sepBy1(parseDigit)(pchar(","));
-//     //     expectFailure(["9"], ",", parser.run(",1,"));
-//     // });
+        let digitP: Parser<Token> = tokenize(intToken)(betweenWhitespaces(pint));
+        let stringP: Parser<Token> = tokenize(strToken)(betweenWhitespaces(pword));
+        let parser: Parser<Token[]> = many(choice([digitP, stringP]));
 
-// });
+        expectSuccess([], "???", parser.run("???"));
+        expectSuccess([intToken(123)], "", parser.run("123"));
+        expectSuccess([intToken(1), strToken("a")], "", parser.run("1 a"));
+        expectSuccess([intToken(42), strToken("a"), strToken("a")], "", parser.run("42 a a"));
+    });
+
+});
